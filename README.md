@@ -1,0 +1,1 @@
+# mercadapp_intmed_challenge

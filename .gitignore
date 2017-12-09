@@ -1,0 +1,9 @@
+.idea
+*.egg-info
+*.pot
+*.py[co]
+.tox/
+__pycache__
+tests/report/
+venv
+db.sqlite3
