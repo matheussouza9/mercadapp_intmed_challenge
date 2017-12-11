@@ -1,3 +1,14 @@
 from django.contrib import admin
+from .models import Market, Item
 
-# Register your models here.
+
+class MarketAdmin(admin.ModelAdmin):
+    pass
+
+
+class ItemAdmin(admin.ModelAdmin):
+    pass
+
+
+admin.site.register(Market, MarketAdmin)
+admin.site.register(Item, ItemAdmin)
