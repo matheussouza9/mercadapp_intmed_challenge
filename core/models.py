@@ -30,20 +30,25 @@ class Item(models.Model):
 
 
 class Cart(models.Model):
-    user = models.ForeignKey(User, related_name='cart', on_delete=models.DO_NOTHING)
-    market = models.ForeignKey(Market, related_name='cart', on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(User, related_name='carts', on_delete=models.DO_NOTHING)
+    market = models.ForeignKey(Market, related_name='carts', on_delete=models.DO_NOTHING)
     items = models.ManyToManyField(Item, through='ItemCart', blank=True)
     is_open = models.BooleanField(default=True)
+    active = models.BooleanField(default=True)
     partial_total = models.FloatField(default=0)
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        self.partial_total = self.calculate_total()
+        super().save()
+
+    def delete(self, using=None, keep_parents=False):
+        self.active = False
+        super().save()
 
     def close(self):
         if self.is_open:
             self.is_open = False
             self.save()
-
-    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        self.partial_total = self.calculate_total()
-        super().save()
 
     def calculate_total(self):
         total = 0
@@ -51,6 +56,16 @@ class Cart(models.Model):
             total += itemCart.item.price * itemCart.amount
 
         return total
+
+    def set_items_cart_list(self, items_cart):
+        # items_cart is a list of ItemCart objects
+
+        # deleting all previous item_cart from this cart
+        self.itemcart_set.all().delete()
+
+        for item_cart in items_cart:
+            item_cart.cart = self
+            item_cart.save()
 
 
 class ItemCart(models.Model):
@@ -60,9 +75,12 @@ class ItemCart(models.Model):
 
 
 class Order(models.Model):
-    cart = models.OneToOneField(Cart, on_delete=models.DO_NOTHING)
+    market = models.ForeignKey(Market, related_name='orders', on_delete=models.DO_NOTHING)
+    cart = models.OneToOneField(Cart, related_name='order', on_delete=models.DO_NOTHING)
+    user = models.ForeignKey(User, related_name='orders', on_delete=models.DO_NOTHING)
     delivery_address = models.CharField(max_length=500)
-    date = models.DateTimeField(auto_now_add=True, null=True)
+    delivery_appointment = models.DateTimeField()
+    payment_date = models.DateTimeField(auto_now_add=True, null=True)
 
     @property
     def total(self):

@@ -1,6 +1,5 @@
 from django.contrib.auth.models import User
 from .models import Market, Item, Cart, ItemCart
-from rest_framework.validators import UniqueTogetherValidator
 from rest_framework import serializers
 
 
@@ -30,62 +29,76 @@ class ItemCartSerializer(serializers.ModelSerializer):
         fields = ('item', 'amount')
 
 
-class CartSerializerPost(serializers.ModelSerializer):
-    items = ItemCartSerializer(many=True)
+class CartSerializerInput(serializers.ModelSerializer):
+    items_cart = ItemCartSerializer(many=True)
 
     class Meta:
         model = Cart
-        fields = ('market', 'items')
+        fields = ('market', 'items_cart')
 
     def validate(self, data):
         market = data['market']
-        items = data['items']
-        items_to_save = []
+        items_cart = data['items_cart']
+        items_cart_to_save = []
 
-        for itemCart in items:
-            item = itemCart['item']
-            amount = itemCart['amount']
+        for item_cart in items_cart:
+            item = item_cart['item']
+            amount = item_cart['amount']
+
+            # if item is not active, skip it
+            if not item.active:
+                raise serializers.ValidationError(
+                    "Item {} doesn't exist in stock".format(item.id)
+                )
 
             # it checks if item belongs to the market
             if item.market != market:
                 raise serializers.ValidationError(
-                    "{} doesn't belong to {}".format(item.name, market.name)
+                    "Item {} - {} doesn't belong to {}".format(item.id, item.name, market.name)
                 )
 
             # it checks if item amount is available in the market
             if amount > item.amount_available:
                 raise serializers.ValidationError(
-                    "{} {} unit are not available in stock. Only {} unit".format(amount, item.name, item.amount_available)
+                    "Item {} - {} {} units are not available in stock. Only {} units".format(
+                        item.id, amount, item.name, item.amount_available
+                    )
                 )
 
-            items_to_save.append(ItemCart(item=item, amount=amount))
+            items_cart_to_save.append(ItemCart(item=item, amount=amount))
 
-        data['items'] = items_to_save
+        data['items_cart'] = items_cart_to_save
         return data
 
     def create(self, validated_data):
         request = self.context['request']
         market = validated_data['market']
-        items = validated_data['items']
+        items_cart = validated_data['items_cart']
 
         cart = Cart.objects.create(market=market, user=request.user)
-
-        for itemCart in items:
-            itemCart.cart = cart
-            itemCart.save()
-
+        cart.set_items_cart_list(items_cart=items_cart)
         cart.save()
 
         return cart
 
+    def update(self, instance, validated_data):
+        market = validated_data['market']
+        items_cart = validated_data['items_cart']
 
-class CartSerializerGet(serializers.ModelSerializer):
+        instance.market = market
+        instance.set_items_cart_list(items_cart=items_cart)
+        instance.save()
+
+        return instance
+
+
+class CartSerializerOutput(serializers.ModelSerializer):
     market = MarketSerializer()
     items_cart = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
-        exclude = ('user', 'items')
+        exclude = ('user', 'items', 'active')
 
     def get_items_cart(self, cart):
         response_obj = []

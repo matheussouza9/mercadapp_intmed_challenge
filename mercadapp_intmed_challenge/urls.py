@@ -6,8 +6,8 @@ from rest_framework import routers
 from core import views
 
 router = routers.DefaultRouter()
-router.register(r'market', views.MarketViewSet)
-router.register(r'cart', views.CartViewSet, base_name='cart')
+router.register(r'markets', views.MarketViewSet, base_name='markets')
+router.register(r'carts', views.CartViewSet, base_name='carts')
 
 urlpatterns = [
     path('api/', include(router.urls)),
