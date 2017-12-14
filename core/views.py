@@ -1,12 +1,17 @@
-from .models import Market, Cart
-from rest_framework import status
+from .models import Market, Cart, Order
+from .permissions import IsOwner
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound, MethodNotAllowed
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.decorators import detail_route, list_route
 from rest_framework.response import Response
-from .serializers import MarketSerializer, ItemSerializer, CartSerializerInput, CartSerializerOutput
+from .serializers import (
+    MarketSerializer,
+    ItemSerializer,
+    CartSerializerInput, CartSerializerOutput,
+    OrderSerializerInput, OrderSerializerOutput
+)
 
 
 class MarketViewSet(ReadOnlyModelViewSet):
@@ -16,7 +21,7 @@ class MarketViewSet(ReadOnlyModelViewSet):
     permission_classes = (IsAuthenticated,)
 
     @detail_route(url_path='items', methods=['get'])
-    def items(self, request, pk=None):
+    def items(self, request, pk=None, *args, **kwargs):
         market = self.get_object()
         items = market.items.filter(active=True)
         serializer = ItemSerializer(items, many=True)
@@ -30,24 +35,26 @@ class CartViewSet(ModelViewSet):
     authentication_classes = (SessionAuthentication, BasicAuthentication)
     permission_classes = (IsAuthenticated,)
 
-    def list(self, request):
+    def list(self, request, *args, **kwargs):
         user = request.user
         carts = user.carts.filter(is_open=True, active=True)
         serializer = CartSerializerOutput(carts, many=True)
 
         return Response(data=serializer.data)
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, pk=None, *args, **kwargs):
         user = request.user
-        cart = user.carts.filter(pk=pk, is_open=True, active=True).get()
-        if not cart:
+
+        try:
+            cart = user.carts.get(pk=pk, is_open=True, active=True)
+        except Cart.DoesNotExist:
             raise NotFound()
 
         serializer = CartSerializerOutput(cart)
 
         return Response(data=serializer.data)
 
-    def create(self, request):
+    def create(self, request, *args, **kwargs):
         serializer = CartSerializerInput(data=request.data, context={'request': request})
 
         if not serializer.is_valid():
@@ -58,7 +65,7 @@ class CartViewSet(ModelViewSet):
 
         return Response(data=response_serializer.data)
 
-    def update(self, request, pk=None):
+    def update(self, request, pk=None, *args, **kwargs):
         user = request.user
         cart = user.carts.filter(pk=pk, is_open=True, active=True).get()
         if not cart:
@@ -73,10 +80,10 @@ class CartViewSet(ModelViewSet):
 
         return Response(data=response_serializer.data)
 
-    def partial_update(self, request, pk=None):
+    def partial_update(self, request, pk=None, *args, **kwargs):
         raise MethodNotAllowed(request.method)
 
-    def destroy(self, request, pk=None):
+    def destroy(self, request, pk=None, *args, **kwargs):
         user = request.user
         cart = user.carts.filter(pk=pk, is_open=True, active=True).get()
         if not cart:
@@ -86,3 +93,40 @@ class CartViewSet(ModelViewSet):
         serializer = CartSerializerOutput(cart)
 
         return Response(data=serializer.data)
+
+
+class OrderViewSet(ModelViewSet):
+    queryset = Order.objects.all()
+    serializer_class = OrderSerializerOutput
+    authentication_classes = (SessionAuthentication, BasicAuthentication)
+    permission_classes = (IsAuthenticated, IsOwner)
+
+    def list(self, request, *args, **kwargs):
+        user = request.user
+        orders = user.orders.all()
+        serializer = OrderSerializerOutput(orders, many=True)
+
+        return Response(data=serializer.data)
+
+    def retrieve(self, request, pk=None, *args, **kwargs):
+        user = request.user
+
+        try:
+            order = user.orders.get(pk=pk)
+        except Order.DoesNotExist:
+            raise NotFound()
+
+        serializer = OrderSerializerOutput(order)
+
+        return Response(data=serializer.data)
+
+    def create(self, request, *args, **kwargs):
+        serializer = OrderSerializerInput(data=request.data, context={'request': request})
+
+        if not serializer.is_valid():
+            return Response(serializer.errors)
+
+        my_new_order = serializer.save()
+        response_serializer = OrderSerializerOutput(my_new_order)
+
+        return Response(data=response_serializer.data)

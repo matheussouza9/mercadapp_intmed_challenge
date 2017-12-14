@@ -35,10 +35,15 @@ class Cart(models.Model):
     items = models.ManyToManyField(Item, through='ItemCart', blank=True)
     is_open = models.BooleanField(default=True)
     active = models.BooleanField(default=True)
-    partial_total = models.FloatField(default=0)
+    total = models.FloatField(default=0)
+
+    def __str__(self):
+        return '#{} - Owner: {} - Market: {} - Is open: {} - Active: {}'.format(
+            self.id, self.user, self.market, self.is_open, self.active
+        )
 
     def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
-        self.partial_total = self.calculate_total()
+        self.total = self.calculate_total()
         super().save()
 
     def delete(self, using=None, keep_parents=False):
@@ -82,6 +87,11 @@ class Order(models.Model):
     delivery_appointment = models.DateTimeField()
     payment_date = models.DateTimeField(auto_now_add=True, null=True)
 
+    def __str__(self):
+        return '#{} - Owner: {} - Market: {} - Paid at {}'.format(
+            self.id, self.user, self.market, self.payment_date
+        )
+
     @property
     def total(self):
-        return self.cart.partial_total
+        return self.cart.total
