@@ -4,7 +4,7 @@ from rest_framework.authentication import SessionAuthentication, BasicAuthentica
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound, MethodNotAllowed
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
-from rest_framework.decorators import detail_route, list_route
+from rest_framework.decorators import detail_route
 from rest_framework.response import Response
 from .serializers import (
     MarketSerializer,
@@ -130,3 +130,12 @@ class OrderViewSet(ModelViewSet):
         response_serializer = OrderSerializerOutput(my_new_order)
 
         return Response(data=response_serializer.data)
+
+    def update(self, request, pk=None, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def partial_update(self, request, pk=None, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
+
+    def destroy(self, request, pk=None, *args, **kwargs):
+        raise MethodNotAllowed(request.method)
