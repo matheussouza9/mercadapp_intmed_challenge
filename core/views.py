@@ -1,5 +1,6 @@
 from .models import Market, Cart, Order
 from .permissions import IsOwner
+from rest_framework import status
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.exceptions import NotFound, MethodNotAllowed
@@ -58,12 +59,12 @@ class CartViewSet(ModelViewSet):
         serializer = CartSerializerInput(data=request.data, context={'request': request})
 
         if not serializer.is_valid():
-            return Response(serializer.errors)
+            return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
 
         my_new_cart = serializer.save()
         response_serializer = CartSerializerOutput(my_new_cart)
 
-        return Response(data=response_serializer.data)
+        return Response(data=response_serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None, *args, **kwargs):
         user = request.user
@@ -73,7 +74,7 @@ class CartViewSet(ModelViewSet):
 
         serializer = CartSerializerInput(instance=cart, data=request.data, context={'request': request})
         if not serializer.is_valid():
-            return Response(serializer.errors)
+            return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
 
         my_updated_cart = serializer.save()
         response_serializer = CartSerializerOutput(my_updated_cart)
@@ -124,12 +125,12 @@ class OrderViewSet(ModelViewSet):
         serializer = OrderSerializerInput(data=request.data, context={'request': request})
 
         if not serializer.is_valid():
-            return Response(serializer.errors)
+            return Response(serializer.errors, status.HTTP_400_BAD_REQUEST)
 
         my_new_order = serializer.save()
         response_serializer = OrderSerializerOutput(my_new_order)
 
-        return Response(data=response_serializer.data)
+        return Response(data=response_serializer.data, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None, *args, **kwargs):
         raise MethodNotAllowed(request.method)

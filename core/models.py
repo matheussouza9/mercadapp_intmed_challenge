@@ -1,4 +1,5 @@
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 
 
@@ -27,6 +28,13 @@ class Item(models.Model):
 
     def __str__(self):
         return '{} - {}'.format(self.name, self.market)
+
+    def withdraw_amount(self, amount_to_withdraw):
+        if amount_to_withdraw > self.amount_available:
+            raise ValidationError('amount_to_withdraw is greater than amount_available')
+
+        self.amount_available -= amount_to_withdraw
+        self.save()
 
 
 class Cart(models.Model):
@@ -78,6 +86,9 @@ class ItemCart(models.Model):
     cart = models.ForeignKey(Cart, on_delete=models.DO_NOTHING)
     amount = models.IntegerField()
 
+    def update_item_amount_stock(self):
+        self.item.withdraw_amount(self.amount)
+
 
 class Order(models.Model):
     market = models.ForeignKey(Market, related_name='orders', on_delete=models.DO_NOTHING)
@@ -91,6 +102,13 @@ class Order(models.Model):
         return '#{} - Owner: {} - Market: {} - Paid at {}'.format(
             self.id, self.user, self.market, self.payment_date
         )
+
+    def save(self, force_insert=False, force_update=False, using=None, update_fields=None):
+        # Update each item amount before save an order
+        for item_cart in self.cart.itemcart_set.all():
+            item_cart.update_item_amount_stock()
+
+        super().save()
 
     @property
     def total(self):
