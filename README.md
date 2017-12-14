@@ -25,7 +25,7 @@ $ pip install -r requirements.txt
 Create database structure
 
 ```bash
-$ ./manage.py migrate
+$ ./manage.py syncdb
 ```
 
 Create a super user for django admin

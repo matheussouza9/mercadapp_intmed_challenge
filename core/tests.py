@@ -125,8 +125,7 @@ class CoreTests(APITestCase):
         self.assertEquals(response.data, serializer.data)
 
     def test_not_list_inactive_items_from_market(self):
-        market = Market.objects.get(name='Dinal')
-        items = market.items.filter(active=True)
+        market = Market.objects.get(name='Skina')
         active_items = market.items.filter(active=True)
         serializer = ItemSerializer(active_items, many=True)
 
